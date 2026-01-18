@@ -1,0 +1,36 @@
+name: device_linker
+description: "A premium bridge between mobile and desktop."
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.7
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  
+  # Communication
+  web_socket_channel: ^3.0.1
+  shelf: ^1.4.1
+  shelf_web_socket: ^2.0.0
+  
+  # Utilities
+  shared_preferences: ^2.3.2
+  network_info_plus: ^6.1.0
+  device_info_plus: ^11.1.0
+  uuid: ^4.5.1
+  
+  # UI & Scanner
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^6.0.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
