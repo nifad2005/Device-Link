@@ -4,6 +4,7 @@ import 'platform_service.dart';
 import 'server_service.dart';
 import 'client_service.dart';
 import 'file_transfer_service.dart';
+import 'settings_service.dart';
 import '../core/models/bridge_message.dart';
 
 enum ConnectionStatus { idle, searching, connecting, connected, error }
@@ -16,6 +17,7 @@ class ConnectionService {
   final ServerService _serverService = ServerService();
   final ClientService _clientService = ClientService();
   final FileTransferService _fileTransferService = FileTransferService();
+  final SettingsService _settings = SettingsService();
 
   final ValueNotifier<ConnectionStatus> status = ValueNotifier(ConnectionStatus.idle);
   final ValueNotifier<String?> serverAddress = ValueNotifier(null);
@@ -42,6 +44,12 @@ class ConnectionService {
       _clientService.connectionStatus.listen((isConnected) {
         status.value = isConnected ? ConnectionStatus.connected : ConnectionStatus.idle;
       });
+
+      // Attempt Auto-connect if enabled
+      if (_settings.autoConnect.value && _settings.lastConnectedAddress.value != null) {
+        debugPrint('ConnectionService: Attempting auto-connect to ${_settings.lastConnectedAddress.value}');
+        connectToDevice(_settings.lastConnectedAddress.value!);
+      }
     }
   }
 
@@ -49,7 +57,6 @@ class ConnectionService {
     if (message.type.name.startsWith('fileTransfer')) {
       _fileTransferService.handleIncomingMessage(message);
     } else {
-      // Handle other commands (e.g., status updates from server)
       debugPrint('Mobile received message: ${message.type}');
     }
   }
@@ -59,6 +66,8 @@ class ConnectionService {
     final success = await _clientService.connect(address);
     if (success) {
       status.value = ConnectionStatus.connected;
+      // Save for auto-connect
+      await _settings.setLastConnectedAddress(address);
       return true;
     } else {
       status.value = ConnectionStatus.error;
@@ -81,5 +90,10 @@ class ConnectionService {
       _clientService.disconnect();
     }
     status.value = ConnectionStatus.idle;
+  }
+
+  Future<void> forgetAndDisconnect() async {
+    disconnect();
+    await _settings.forgetDevice();
   }
 }

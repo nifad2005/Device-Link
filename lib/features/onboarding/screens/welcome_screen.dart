@@ -1,113 +1,158 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../connection/screens/pairing_screen.dart';
+import '../../dashboard/screens/dashboard_screen.dart';
+import '../../../core/widgets/premium_card.dart';
+import '../../../services/connection_service.dart';
 
-class WelcomeScreen extends StatelessWidget {
+class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
+
+  @override
+  State<WelcomeScreen> createState() => _WelcomeScreenState();
+}
+
+class _WelcomeScreenState extends State<WelcomeScreen> {
+  final ConnectionService _connectionService = ConnectionService();
+
+  @override
+  void initState() {
+    super.initState();
+    // Monitor connection status to auto-navigate to dashboard if auto-connect succeeds
+    _connectionService.status.addListener(_onStatusChanged);
+  }
+
+  @override
+  void dispose() {
+    _connectionService.status.removeListener(_onStatusChanged);
+    super.dispose();
+  }
+
+  void _onStatusChanged() {
+    if (_connectionService.status.value == ConnectionStatus.connected && mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const DashboardScreen()),
+        (route) => false,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Spacer(),
-              // Minimalist Icon/Logo Placeholder
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Icon(
-                  Icons.link_rounded,
-                  size: 32,
-                  color: Color(0xFF1A1C1E),
+      body: Stack(
+        children: [
+          // Background subtle gradient
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment.topRight,
+                  radius: 1.5,
+                  colors: [
+                    Theme.of(context).colorScheme.primary.withOpacity(0.05),
+                    Colors.transparent,
+                  ],
                 ),
               ),
-              const SizedBox(height: 40),
-              Text(
-                'Device Linker',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Bridge the gap between your mobile and desktop. Effortless control, anywhere in the world.',
-                style: Theme.of(context).textTheme.bodyLarge,
-              ),
-              const Spacer(),
-              _buildFeatureRow(
-                context,
-                icon: Icons.qr_code_scanner_rounded,
-                title: 'Instant Pairing',
-                subtitle: 'Scan once, connect forever.',
-              ),
-              const SizedBox(height: 24),
-              _buildFeatureRow(
-                context,
-                icon: Icons.public_rounded,
-                title: 'Universal Access',
-                subtitle: 'Works over Wi-Fi and Internet.',
-              ),
-              const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const PairingScreen()),
-                    );
-                  },
-                  child: const Text('Get Started'),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+          
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 80),
+                  const Text(
+                    'Device',
+                    style: TextStyle(
+                      fontSize: 48,
+                      fontWeight: FontWeight.w300,
+                      letterSpacing: -1,
+                    ),
+                  ),
+                  Text(
+                    'Linker',
+                    style: TextStyle(
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: -1,
+                      color: Theme.of(context).colorScheme.primary,
+                      height: 0.9,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'The premium bridge between your mobile device and workstation.',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white.withOpacity(0.4),
+                      height: 1.5,
+                    ),
+                  ),
+                  const Spacer(),
+                  ValueListenableBuilder<ConnectionStatus>(
+                    valueListenable: _connectionService.status,
+                    builder: (context, status, child) {
+                      if (status == ConnectionStatus.connecting) {
+                        return Center(
+                          child: Column(
+                            children: [
+                              CircularProgressIndicator(
+                                color: Theme.of(context).colorScheme.primary,
+                                strokeWidth: 2,
+                              ),
+                              const SizedBox(height: 24),
+                              const Text(
+                                'Reconnecting to your PC...',
+                                style: TextStyle(color: Colors.white30, fontSize: 13),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                      
+                      return Column(
+                        children: [
+                          PremiumCard(
+                            onTap: () {
+                              HapticFeedback.mediumImpact();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const PairingScreen()),
+                              );
+                            },
+                            padding: 24,
+                            color: Theme.of(context).colorScheme.primary,
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Link New Device',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                SizedBox(width: 12),
+                                Icon(Icons.qr_code_scanner_rounded, color: Colors.black),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 48),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildFeatureRow(BuildContext context,
-      {required IconData icon, required String title, required String subtitle}) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 24),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Colors.white,
-                ),
-              ),
-              Text(
-                subtitle,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Colors.white54,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

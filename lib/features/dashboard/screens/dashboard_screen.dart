@@ -4,6 +4,7 @@ import '../../remote_control/screens/trackpad_screen.dart';
 import '../../remote_control/screens/media_controller_screen.dart';
 import '../../remote_control/screens/power_actions_screen.dart';
 import '../../remote_control/screens/file_sharing_screen.dart';
+import '../../settings/screens/settings_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -16,7 +17,12 @@ class DashboardScreen extends StatelessWidget {
         centerTitle: false,
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },
             icon: const Icon(Icons.settings_outlined),
           ),
           const SizedBox(width: 8),

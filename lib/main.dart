@@ -4,9 +4,15 @@ import 'features/onboarding/screens/welcome_screen.dart';
 import 'features/desktop/screens/desktop_hub_screen.dart';
 import 'services/connection_service.dart';
 import 'services/platform_service.dart';
+import 'services/settings_service.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Services
+  await SettingsService().init();
+  await NotificationService().init();
   
   final connectionService = ConnectionService();
   await connectionService.init();
@@ -23,8 +29,6 @@ class DeviceLinkerApp extends StatelessWidget {
       title: 'Device Linker',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.darkTheme,
-      // If we are on desktop, show the Desktop Hub.
-      // If we are on mobile, show the Welcome Screen.
       home: PlatformService.isDesktop 
           ? const DesktopHubScreen() 
           : const WelcomeScreen(),

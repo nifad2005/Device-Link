@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/widgets/premium_card.dart';
+import '../../../services/connection_service.dart';
+import '../../../core/models/bridge_message.dart';
 
 class PowerActionsScreen extends StatelessWidget {
   const PowerActionsScreen({super.key});
+
+  void _sendPowerCommand(String command) {
+    ConnectionService().sendMessage(BridgeMessage(
+      type: MessageType.powerCommand,
+      data: {'command': command},
+    ));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,7 +46,7 @@ class PowerActionsScreen extends StatelessWidget {
                 title: 'Sleep',
                 subtitle: 'Put the workstation into low-power mode.',
                 color: Colors.orangeAccent,
-                onTap: () => _confirmAction(context, 'Sleep'),
+                onTap: () => _confirmAction(context, 'sleep'),
               ),
               const SizedBox(height: 16),
               _buildPowerOption(
@@ -46,7 +55,7 @@ class PowerActionsScreen extends StatelessWidget {
                 title: 'Restart',
                 subtitle: 'Reboot the system immediately.',
                 color: Colors.blueAccent,
-                onTap: () => _confirmAction(context, 'Restart'),
+                onTap: () => _confirmAction(context, 'restart'),
               ),
               const SizedBox(height: 16),
               _buildPowerOption(
@@ -55,7 +64,7 @@ class PowerActionsScreen extends StatelessWidget {
                 title: 'Shut Down',
                 subtitle: 'Close all apps and turn off the PC.',
                 color: Colors.redAccent,
-                onTap: () => _confirmAction(context, 'Shut Down'),
+                onTap: () => _confirmAction(context, 'shutdown'),
               ),
               const Spacer(),
               PremiumCard(
@@ -157,7 +166,7 @@ class PowerActionsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 32),
                 Text(
-                  'Confirm $action',
+                  'Confirm ${action.toUpperCase()}',
                   style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
@@ -183,8 +192,11 @@ class PowerActionsScreen extends StatelessWidget {
                       child: FilledButton(
                         onPressed: () {
                           HapticFeedback.vibrate();
+                          _sendPowerCommand(action);
                           Navigator.pop(context);
-                          // TODO: Send power command
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Command $action sent to workstation')),
+                          );
                         },
                         style: FilledButton.styleFrom(
                           backgroundColor: Colors.redAccent,
@@ -192,7 +204,7 @@ class PowerActionsScreen extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
-                        child: Text(action, style: const TextStyle(fontSize: 16)),
+                        child: Text(action.toUpperCase(), style: const TextStyle(fontSize: 16)),
                       ),
                     ),
                   ],
