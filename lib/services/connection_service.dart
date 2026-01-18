@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'platform_service.dart';
 import 'server_service.dart';
 import 'client_service.dart';
+import 'file_transfer_service.dart';
 import '../core/models/bridge_message.dart';
 
 enum ConnectionStatus { idle, searching, connecting, connected, error }
@@ -14,6 +15,7 @@ class ConnectionService {
 
   final ServerService _serverService = ServerService();
   final ClientService _clientService = ClientService();
+  final FileTransferService _fileTransferService = FileTransferService();
 
   final ValueNotifier<ConnectionStatus> status = ValueNotifier(ConnectionStatus.idle);
   final ValueNotifier<String?> serverAddress = ValueNotifier(null);
@@ -31,6 +33,24 @@ class ConnectionService {
       } else {
         status.value = ConnectionStatus.error;
       }
+    } else {
+      // Mobile: listen for messages from the client
+      _clientService.messages.listen((message) {
+        _handleIncomingMessage(message);
+      });
+      
+      _clientService.connectionStatus.listen((isConnected) {
+        status.value = isConnected ? ConnectionStatus.connected : ConnectionStatus.idle;
+      });
+    }
+  }
+
+  void _handleIncomingMessage(BridgeMessage message) {
+    if (message.type.name.startsWith('fileTransfer')) {
+      _fileTransferService.handleIncomingMessage(message);
+    } else {
+      // Handle other commands (e.g., status updates from server)
+      debugPrint('Mobile received message: ${message.type}');
     }
   }
 
@@ -47,7 +67,9 @@ class ConnectionService {
   }
 
   void sendMessage(BridgeMessage message) {
-    if (!isDesktop) {
+    if (isDesktop) {
+      _serverService.broadcastMessage(message);
+    } else {
       _clientService.sendMessage(message);
     }
   }

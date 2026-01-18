@@ -1,9 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/widgets/premium_card.dart';
+import '../../../services/connection_service.dart';
+import '../../../core/models/bridge_message.dart';
 
-class MediaControllerScreen extends StatelessWidget {
+class MediaControllerScreen extends StatefulWidget {
   const MediaControllerScreen({super.key});
+
+  @override
+  State<MediaControllerScreen> createState() => _MediaControllerScreenState();
+}
+
+class _MediaControllerScreenState extends State<MediaControllerScreen> {
+  final ConnectionService _connectionService = ConnectionService();
+  double _volume = 0.5;
+
+  void _sendMediaCommand(String command) {
+    HapticFeedback.lightImpact();
+    _connectionService.sendMessage(BridgeMessage(
+      type: MessageType.mediaCommand,
+      data: {'command': command},
+    ));
+  }
+
+  void _sendVolumeCommand(double value) {
+    setState(() => _volume = value);
+    _connectionService.sendMessage(BridgeMessage(
+      type: MessageType.mediaCommand,
+      data: {'command': 'volume', 'value': value},
+    ));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -22,7 +48,6 @@ class MediaControllerScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Media Art Placeholder
               PremiumCard(
                 padding: 0,
                 color: Colors.white.withOpacity(0.05),
@@ -57,25 +82,23 @@ class MediaControllerScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 64),
-              // Playback Controls
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   _buildMediaButton(
                     context,
                     icon: Icons.skip_previous_rounded,
-                    onPressed: () => HapticFeedback.lightImpact(),
+                    onPressed: () => _sendMediaCommand('previous'),
                   ),
                   _buildPlayButton(context),
                   _buildMediaButton(
                     context,
                     icon: Icons.skip_next_rounded,
-                    onPressed: () => HapticFeedback.lightImpact(),
+                    onPressed: () => _sendMediaCommand('next'),
                   ),
                 ],
               ),
               const SizedBox(height: 64),
-              // Volume Slider
               Row(
                 children: [
                   const Icon(Icons.volume_down_rounded, color: Colors.white24, size: 20),
@@ -87,11 +110,8 @@ class MediaControllerScreen extends StatelessWidget {
                         overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
                       ),
                       child: Slider(
-                        value: 0.5,
-                        onChanged: (val) {
-                          // Haptic feedback for slider movement can be noisy, 
-                          // maybe only on start/end or specific intervals
-                        },
+                        value: _volume,
+                        onChanged: _sendVolumeCommand,
                         activeColor: Theme.of(context).colorScheme.primary,
                         inactiveColor: Colors.white.withOpacity(0.05),
                       ),
@@ -133,7 +153,7 @@ class MediaControllerScreen extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => HapticFeedback.mediumImpact(),
+          onTap: () => _sendMediaCommand('toggle'),
           customBorder: const CircleBorder(),
           child: const Icon(
             Icons.play_arrow_rounded,

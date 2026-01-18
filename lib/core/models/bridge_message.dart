@@ -7,7 +7,10 @@ enum MessageType {
   mediaCommand,
   powerCommand,
   keyboardInput,
-  statusUpdate
+  statusUpdate,
+  fileTransferStart,
+  fileTransferChunk,
+  fileTransferEnd
 }
 
 class BridgeMessage {

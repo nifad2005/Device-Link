@@ -17,24 +17,28 @@
 - [x] **Micro-animations:** Scanning animations and loading states.
 - [x] **Typography Audit:** Ensure consistent spacing and hierarchy across all screens.
 
-## Phase 3: Core Connectivity (Current)
+## Phase 3: Core Connectivity (Completed)
 *Focus: Trust and Reliability*
-- [ ] **State Management:** Formalize connection states (Disconnected, Searching, Handshaking, Connected).
-- [ ] **Discovery Logic:** Implement a service structure for mDNS/Local Discovery (Mocked for UI flow).
-- [ ] **QR Handshake:** logic for token validation and device pairing.
-- [ ] **Device Persistence:** Save paired workstation details locally (using SharedPreferences later).
-- [ ] **Auto-Connect UX:** Seamless transition from Welcome to Dashboard if a device is known.
+- [x] **Dual-Mode System:** App works as both Server (Desktop) and Client (Mobile).
+- [x] **WebSocket Bridge:** Real-time JSON-based communication protocol.
+- [x] **QR Handshake:** Seamless pairing via local network discovery.
 
-## Phase 4: Input & Control Precision
+## Phase 4: File Sharing & Data Bridge (Current)
+*Focus: Seamless Asset Movement*
+- [ ] **File Transfer UI:** Premium drag-and-drop feel on Mobile and Desktop.
+- [ ] **Chunked Transfer:** Reliable file streaming over the local network.
+- [ ] **Transfer History:** Quick access to recently moved files.
+- [ ] **Native Integration:** Open files automatically on the receiving device.
+
+## Phase 5: Input & Control Precision
 *Focus: Tool Mastery*
 - [ ] **Trackpad Pro:** Momentum scrolling, pinch-to-zoom gestures.
 - [ ] **Keyboard Sync:** Real-time text injection and specialized PC keys (Esc, Win, Alt-Tab).
 - [ ] **Media Metadata:** Fetch current song/video info from PC to display on mobile.
 
-## Phase 5: Advanced Features
+## Phase 6: Advanced Features
 *Focus: Desktop Power in Your Pocket*
 - [ ] **App Switcher:** Remote task management.
-- [ ] **File Transfer:** Drag and drop from PC to Phone.
 - [ ] **Multi-Device Sync:** Control multiple PCs from one app.
 
 ---

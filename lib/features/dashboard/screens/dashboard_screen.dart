@@ -3,6 +3,7 @@ import '../../../core/widgets/premium_card.dart';
 import '../../remote_control/screens/trackpad_screen.dart';
 import '../../remote_control/screens/media_controller_screen.dart';
 import '../../remote_control/screens/power_actions_screen.dart';
+import '../../remote_control/screens/file_sharing_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -68,13 +69,14 @@ class DashboardScreen extends StatelessWidget {
                 ),
                 _buildActionCard(
                   context,
-                  icon: Icons.keyboard_rounded,
-                  label: 'Keyboard',
-                  color: Colors.greenAccent,
-                  heroTag: 'keyboard_hero',
-                  onTap: () {
-                    // TODO: Implement Keyboard overlay
-                  },
+                  icon: Icons.cloud_sync_rounded,
+                  label: 'File Bridge',
+                  color: Colors.purpleAccent,
+                  heroTag: 'file_hero',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const FileSharingScreen()),
+                  ),
                 ),
                 _buildActionCard(
                   context,
