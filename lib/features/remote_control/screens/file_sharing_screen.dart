@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:open_filex/open_filex.dart';
+import 'package:path_provider/path_provider.dart';
 import '../../../core/widgets/premium_card.dart';
 import '../../../services/file_transfer_service.dart';
 
@@ -14,20 +15,22 @@ class FileSharingScreen extends StatefulWidget {
 
 class _FileSharingScreenState extends State<FileSharingScreen> {
   final FileTransferService _transferService = FileTransferService();
-  List<FileTransferProgress> _recentTransfers = [];
+  final List<FileTransferProgress> _recentTransfers = [];
 
   @override
   void initState() {
     super.initState();
     _transferService.progressStream.listen((progress) {
-      setState(() {
-        final index = _recentTransfers.indexWhere((t) => t.fileName == progress.fileName);
-        if (index >= 0) {
-          _recentTransfers[index] = progress;
-        } else {
-          _recentTransfers.insert(0, progress);
-        }
-      });
+      if (mounted) {
+        setState(() {
+          final index = _recentTransfers.indexWhere((t) => t.fileName == progress.fileName);
+          if (index >= 0) {
+            _recentTransfers[index] = progress;
+          } else {
+            _recentTransfers.insert(0, progress);
+          }
+        });
+      }
     });
   }
 
@@ -91,7 +94,7 @@ class _FileSharingScreenState extends State<FileSharingScreen> {
                 children: [
                   const SizedBox(height: 32),
                   const Text(
-                    'Recent Transfers',
+                    'Transfer History',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
@@ -119,6 +122,9 @@ class _FileSharingScreenState extends State<FileSharingScreen> {
                             padding: const EdgeInsets.only(bottom: 12.0),
                             child: PremiumCard(
                               padding: 16,
+                              onTap: (transfer.isIncoming && transfer.isComplete) 
+                                ? () => _openReceivedFile(transfer.fileName)
+                                : null,
                               child: Row(
                                 children: [
                                   Container(
@@ -128,8 +134,8 @@ class _FileSharingScreenState extends State<FileSharingScreen> {
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Icon(
-                                      _getFileIcon(transfer.fileName),
-                                      color: Colors.white70,
+                                      transfer.isIncoming ? Icons.download_rounded : _getFileIcon(transfer.fileName),
+                                      color: transfer.isIncoming ? Colors.greenAccent : Colors.white70,
                                       size: 20,
                                     ),
                                   ),
@@ -148,6 +154,7 @@ class _FileSharingScreenState extends State<FileSharingScreen> {
                                         LinearProgressIndicator(
                                           value: transfer.progress,
                                           backgroundColor: Colors.white10,
+                                          color: transfer.isIncoming ? Colors.greenAccent : Theme.of(context).colorScheme.primary,
                                           borderRadius: BorderRadius.circular(2),
                                           minHeight: 2,
                                         ),
@@ -178,6 +185,20 @@ class _FileSharingScreenState extends State<FileSharingScreen> {
         ],
       ),
     );
+  }
+
+  void _openReceivedFile(String fileName) async {
+    final dir = await getApplicationDocumentsDirectory();
+    final filePath = '${dir.path}/DeviceLinker/$fileName';
+    if (await File(filePath).exists()) {
+      await OpenFilex.open(filePath);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('File not found locally.')),
+        );
+      }
+    }
   }
 
   IconData _getFileIcon(String fileName) {

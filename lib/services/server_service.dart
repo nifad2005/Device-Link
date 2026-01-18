@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_web_socket/shelf_web_socket.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:network_info_plus/network_info_plus.dart';
 import '../core/models/bridge_message.dart';
 import 'file_transfer_service.dart';
 
@@ -20,10 +21,15 @@ class ServerService {
         connectedClients.value = _clients.length;
         debugPrint('New client connected. Total: ${_clients.length}');
 
-        webSocket.sink.add(BridgeMessage(
-          type: MessageType.auth,
-          data: {'status': 'connected', 'version': '1.0.0'},
-        ).toJson());
+        // Immediate handshake
+        try {
+          webSocket.sink.add(BridgeMessage(
+            type: MessageType.auth,
+            data: {'status': 'connected', 'version': '1.0.0'},
+          ).toJson());
+        } catch (e) {
+          debugPrint('Error sending handshake: $e');
+        }
 
         webSocket.stream.listen(
           (message) {
@@ -38,37 +44,48 @@ class ServerService {
             _clients.remove(webSocket);
             connectedClients.value = _clients.length;
             debugPrint('Client error: $e');
-          }
+          },
+          cancelOnError: true,
         );
       });
 
-      _server = await shelf_io.serve(handler, InternetAddress.anyIPv4, 8080);
-      
-      // Try to find the most likely local IP
-      final interfaces = await NetworkInterface.list();
-      String? bestIp;
-      
-      for (var interface in interfaces) {
-        // Skip virtual interfaces often used by Docker/VMs
-        if (interface.name.toLowerCase().contains('virtual') || 
-            interface.name.toLowerCase().contains('vbox') ||
-            interface.name.toLowerCase().contains('vmnet')) continue;
-            
-        for (var addr in interface.addresses) {
-          if (addr.type == InternetAddressType.IPv4 && !addr.isLoopback) {
-            bestIp = addr.address;
-            // If we find one that starts with 192 or 10, it's likely the right one
-            if (bestIp.startsWith('192.168.') || bestIp.startsWith('10.')) {
-              break;
-            }
-          }
-        }
-        if (bestIp != null && (bestIp.startsWith('192.168.') || bestIp.startsWith('10.'))) break;
+      // Try to serve on 8080, or let the OS pick a port if 8080 is busy
+      try {
+        _server = await shelf_io.serve(handler, InternetAddress.anyIPv4, 8080);
+      } catch (e) {
+        debugPrint('Port 8080 busy, trying random port...');
+        _server = await shelf_io.serve(handler, InternetAddress.anyIPv4, 0);
       }
       
-      final finalIp = bestIp ?? '127.0.0.1';
-      debugPrint('Server started at $finalIp:8080');
-      return '$finalIp:8080';
+      final port = _server!.port;
+      
+      // Use NetworkInfo for more reliable IP discovery on most platforms
+      final info = NetworkInfo();
+      String? ip = await info.getWifiIP();
+      
+      if (ip == null || ip == '127.0.0.1' || ip.isEmpty) {
+        // Fallback to manual interface scanning
+        final interfaces = await NetworkInterface.list();
+        for (var interface in interfaces) {
+          if (interface.name.toLowerCase().contains('virtual') || 
+              interface.name.toLowerCase().contains('vbox') ||
+              interface.name.toLowerCase().contains('vmnet') ||
+              interface.name.toLowerCase().contains('wsl')) continue;
+              
+          for (var addr in interface.addresses) {
+            if (addr.type == InternetAddressType.IPv4 && !addr.isLoopback) {
+              ip = addr.address;
+              if (ip.startsWith('192.168.') || ip.startsWith('10.')) break;
+            }
+          }
+          if (ip != null && (ip.startsWith('192.168.') || ip.startsWith('10.'))) break;
+        }
+      }
+      
+      final finalIp = ip ?? '127.0.0.1';
+      final fullAddress = '$finalIp:$port';
+      debugPrint('Server started at $fullAddress');
+      return fullAddress;
     } catch (e) {
       debugPrint('Failed to start server: $e');
       return null;
@@ -84,15 +101,7 @@ class ServerService {
         return;
       }
 
-      // Relay mouse/media commands to listeners or execute locally
       debugPrint('Desktop received: ${message.type}');
-      
-      // OPTIONAL: Relay message to all OTHER clients
-      // final jsonMsg = message.toJson();
-      // for (var client in _clients) {
-      //   if (client != source) client.sink.add(jsonMsg);
-      // }
-      
     } catch (e) {
       debugPrint('Error parsing message: $e');
     }
