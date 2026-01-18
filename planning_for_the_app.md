@@ -23,17 +23,19 @@
 - [x] **WebSocket Bridge:** Real-time JSON-based communication protocol.
 - [x] **QR Handshake:** Seamless pairing via local network discovery.
 
-## Phase 4: File Sharing & Data Bridge (Current)
+## Phase 4: File Sharing & Data Bridge (Completed)
 *Focus: Seamless Asset Movement*
-- [ ] **File Transfer UI:** Premium drag-and-drop feel on Mobile and Desktop.
-- [ ] **Chunked Transfer:** Reliable file streaming over the local network.
-- [ ] **Transfer History:** Quick access to recently moved files.
-- [ ] **Native Integration:** Open files automatically on the receiving device.
+- [x] **File Transfer UI:** Premium drag-and-drop feel on Mobile and Desktop.
+- [x] **Chunked Transfer:** Reliable file streaming over the local network.
+- [x] **Transfer History:** Quick access to recently moved files.
+- [x] **Native Integration:** Open files automatically on the receiving device.
 
-## Phase 5: Input & Control Precision
+## Phase 5: Input & Control Precision (Current)
 *Focus: Tool Mastery*
+- [x] **Trackpad Basic:** Basic cursor movement and click transmission.
 - [ ] **Trackpad Pro:** Momentum scrolling, pinch-to-zoom gestures.
 - [ ] **Keyboard Sync:** Real-time text injection and specialized PC keys (Esc, Win, Alt-Tab).
+- [ ] **Power Controls:** Remote sleep, restart, and shutdown.
 - [ ] **Media Metadata:** Fetch current song/video info from PC to display on mobile.
 
 ## Phase 6: Advanced Features

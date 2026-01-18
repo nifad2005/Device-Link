@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../core/widgets/premium_card.dart';
+import '../../../services/connection_service.dart';
+import '../../../core/models/bridge_message.dart';
 
 class TrackpadScreen extends StatefulWidget {
   const TrackpadScreen({super.key});
@@ -10,6 +12,23 @@ class TrackpadScreen extends StatefulWidget {
 }
 
 class _TrackpadScreenState extends State<TrackpadScreen> {
+  final ConnectionService _connectionService = ConnectionService();
+
+  void _sendMouseMove(double dx, double dy) {
+    _connectionService.sendMessage(BridgeMessage(
+      type: MessageType.mouseMove,
+      data: {'dx': dx, 'dy': dy},
+    ));
+  }
+
+  void _sendMouseClick(String button) {
+    HapticFeedback.lightImpact();
+    _connectionService.sendMessage(BridgeMessage(
+      type: MessageType.mouseClick,
+      data: {'button': button},
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Hero(
@@ -38,16 +57,16 @@ class _TrackpadScreenState extends State<TrackpadScreen> {
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
                 child: GestureDetector(
                   onPanUpdate: (details) {
-                    // Send delta to PC service
+                    _sendMouseMove(details.delta.dx, details.delta.dy);
                   },
                   onTap: () {
-                    HapticFeedback.lightImpact();
+                    _sendMouseClick('left');
                   },
                   onDoubleTap: () {
-                    HapticFeedback.mediumImpact();
+                    _sendMouseClick('double');
                   },
                   onLongPress: () {
-                    HapticFeedback.heavyImpact();
+                    _sendMouseClick('right');
                   },
                   child: PremiumCard(
                     padding: 0,
@@ -86,9 +105,7 @@ class _TrackpadScreenState extends State<TrackpadScreen> {
                       child: _buildMouseButton(
                         context,
                         label: 'LEFT',
-                        onPressed: () {
-                          HapticFeedback.lightImpact();
-                        },
+                        onPressed: () => _sendMouseClick('left'),
                       ),
                     ),
                     const SizedBox(width: 20),
@@ -96,9 +113,7 @@ class _TrackpadScreenState extends State<TrackpadScreen> {
                       child: _buildMouseButton(
                         context,
                         label: 'RIGHT',
-                        onPressed: () {
-                          HapticFeedback.mediumImpact();
-                        },
+                        onPressed: () => _sendMouseClick('right'),
                       ),
                     ),
                   ],

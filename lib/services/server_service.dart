@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:shelf/shelf_io.dart' as shelf_io;
 import 'package:shelf_web_socket/shelf_web_socket.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:network_info_plus/network_info_plus.dart';
 import '../core/models/bridge_message.dart';
 import 'file_transfer_service.dart';
 
@@ -19,16 +18,17 @@ class ServerService {
       final handler = webSocketHandler((WebSocketChannel webSocket) {
         _clients.add(webSocket);
         connectedClients.value = _clients.length;
-        debugPrint('New client connected. Total: ${_clients.length}');
+        debugPrint('Desktop: [WS] New connection attempt...');
 
-        // Immediate handshake
+        // Shake hands immediately
         try {
           webSocket.sink.add(BridgeMessage(
             type: MessageType.auth,
-            data: {'status': 'connected', 'version': '1.0.0'},
+            data: {'status': 'connected'},
           ).toJson());
+          debugPrint('Desktop: [WS] Auth message sent.');
         } catch (e) {
-          debugPrint('Error sending handshake: $e');
+          debugPrint('Desktop: [WS] Failed to send auth: $e');
         }
 
         webSocket.stream.listen(
@@ -38,56 +38,56 @@ class ServerService {
           onDone: () {
             _clients.remove(webSocket);
             connectedClients.value = _clients.length;
-            debugPrint('Client disconnected. Remaining: ${_clients.length}');
+            debugPrint('Desktop: [WS] Client disconnected.');
           },
           onError: (e) {
             _clients.remove(webSocket);
             connectedClients.value = _clients.length;
-            debugPrint('Client error: $e');
+            debugPrint('Desktop: [WS] Stream error: $e');
           },
-          cancelOnError: true,
         );
       });
 
-      // Try to serve on 8080, or let the OS pick a port if 8080 is busy
-      try {
-        _server = await shelf_io.serve(handler, InternetAddress.anyIPv4, 8080);
-      } catch (e) {
-        debugPrint('Port 8080 busy, trying random port...');
-        _server = await shelf_io.serve(handler, InternetAddress.anyIPv4, 0);
-      }
-      
-      final port = _server!.port;
-      
-      // Use NetworkInfo for more reliable IP discovery on most platforms
-      final info = NetworkInfo();
-      String? ip = await info.getWifiIP();
-      
-      if (ip == null || ip == '127.0.0.1' || ip.isEmpty) {
-        // Fallback to manual interface scanning
-        final interfaces = await NetworkInterface.list();
-        for (var interface in interfaces) {
-          if (interface.name.toLowerCase().contains('virtual') || 
-              interface.name.toLowerCase().contains('vbox') ||
-              interface.name.toLowerCase().contains('vmnet') ||
-              interface.name.toLowerCase().contains('wsl')) continue;
-              
-          for (var addr in interface.addresses) {
-            if (addr.type == InternetAddressType.IPv4 && !addr.isLoopback) {
-              ip = addr.address;
-              if (ip.startsWith('192.168.') || ip.startsWith('10.')) break;
-            }
+      // Bind to all interfaces (0.0.0.0) on port 8080
+      _server = await shelf_io.serve(handler, InternetAddress.anyIPv4, 8080);
+      debugPrint('Desktop: [Server] Listening on 0.0.0.0:8080');
+
+      // Find the correct local network IP
+      String? localIp;
+      final interfaces = await NetworkInterface.list(
+        includeLoopback: false,
+        type: InternetAddressType.IPv4,
+      );
+
+      // 1. Look for common Wi-Fi/Ethernet patterns
+      for (var interface in interfaces) {
+        final name = interface.name.toLowerCase();
+        // Skip virtual/bridge adapters
+        if (name.contains('virtual') || name.contains('vbox') || 
+            name.contains('vmnet') || name.contains('wsl') || 
+            name.contains('docker') || name.contains('vpn')) continue;
+
+        for (var addr in interface.addresses) {
+          final ip = addr.address;
+          if (ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.16.')) {
+            localIp = ip;
+            debugPrint('Desktop: [Network] Found preferred IP: $localIp on interface ${interface.name}');
+            break;
           }
-          if (ip != null && (ip.startsWith('192.168.') || ip.startsWith('10.'))) break;
         }
+        if (localIp != null) break;
       }
-      
-      final finalIp = ip ?? '127.0.0.1';
-      final fullAddress = '$finalIp:$port';
-      debugPrint('Server started at $fullAddress');
-      return fullAddress;
+
+      // 2. Fallback to any non-loopback IP
+      if (localIp == null && interfaces.isNotEmpty) {
+        localIp = interfaces.first.addresses.first.address;
+        debugPrint('Desktop: [Network] Fallback IP: $localIp');
+      }
+
+      final address = '${localIp ?? '127.0.0.1'}:8080';
+      return address;
     } catch (e) {
-      debugPrint('Failed to start server: $e');
+      debugPrint('Desktop: [Fatal] Server failed to start: $e');
       return null;
     }
   }
@@ -95,15 +95,13 @@ class ServerService {
   void _handleMessage(dynamic rawMessage, WebSocketChannel source) {
     try {
       final message = BridgeMessage.fromJson(rawMessage as String);
-      
       if (message.type.name.startsWith('fileTransfer')) {
         _fileTransferService.handleIncomingMessage(message);
         return;
       }
-
-      debugPrint('Desktop received: ${message.type}');
+      debugPrint('Desktop: [Received] ${message.type}');
     } catch (e) {
-      debugPrint('Error parsing message: $e');
+      debugPrint('Desktop: [Error] Parsing message: $e');
     }
   }
 
@@ -113,7 +111,7 @@ class ServerService {
       try {
         client.sink.add(jsonMsg);
       } catch (e) {
-        debugPrint('Error broadcasting: $e');
+        debugPrint('Desktop: [Error] Broadcast failed: $e');
       }
     }
   }

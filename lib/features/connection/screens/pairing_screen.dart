@@ -13,6 +13,7 @@ class PairingScreen extends StatefulWidget {
 class _PairingScreenState extends State<PairingScreen> {
   final MobileScannerController _scannerController = MobileScannerController();
   bool _isConnecting = false;
+  String _targetAddress = '';
 
   @override
   void dispose() {
@@ -25,22 +26,35 @@ class _PairingScreenState extends State<PairingScreen> {
 
     final List<Barcode> barcodes = capture.barcodes;
     for (final barcode in barcodes) {
-      if (barcode.rawValue != null) {
-        setState(() => _isConnecting = true);
-        final address = barcode.rawValue!;
+      final rawValue = barcode.rawValue?.trim();
+      if (rawValue != null && rawValue.isNotEmpty) {
+        setState(() {
+          _isConnecting = true;
+          _targetAddress = rawValue;
+        });
         
-        final success = await ConnectionService().connectToDevice(address);
+        debugPrint('PairingScreen: Attempting connection to $rawValue');
+        final success = await ConnectionService().connectToDevice(rawValue);
         
         if (success && mounted) {
+          debugPrint('PairingScreen: Connection success!');
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (context) => const DashboardScreen()),
             (route) => false,
           );
         } else {
           if (mounted) {
-            setState(() => _isConnecting = false);
+            debugPrint('PairingScreen: Connection failed to $rawValue');
+            setState(() {
+              _isConnecting = false;
+              _targetAddress = '';
+            });
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Failed to connect to workstation')),
+              SnackBar(
+                content: Text('Failed to connect to $rawValue. Ensure you are on the same Wi-Fi.'),
+                backgroundColor: Colors.redAccent,
+                duration: const Duration(seconds: 4),
+              ),
             );
           }
         }
@@ -68,7 +82,7 @@ class _PairingScreenState extends State<PairingScreen> {
               const SizedBox(height: 120),
               Center(
                 child: Text(
-                  _isConnecting ? 'Establishing Link' : 'Pair Device',
+                  _isConnecting ? 'Linking Device' : 'Pair Device',
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
               ),
@@ -77,7 +91,7 @@ class _PairingScreenState extends State<PairingScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 48.0),
                 child: Text(
                   _isConnecting 
-                    ? 'Syncing with workstation...'
+                    ? 'Connecting to $_targetAddress...'
                     : 'Scan the QR code displayed on your PC application to link your device.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: Colors.white54, fontSize: 14),
@@ -88,47 +102,44 @@ class _PairingScreenState extends State<PairingScreen> {
               const Spacer(flex: 2),
               Padding(
                 padding: const EdgeInsets.all(32.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                child: Column(
                   children: [
-                    if (_isConnecting) ...[
-                      SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Theme.of(context).colorScheme.primary,
+                    if (!_isConnecting)
+                      const Text(
+                        'Make sure both devices are on the same Wi-Fi network.',
+                        style: TextStyle(color: Colors.white24, fontSize: 11),
+                      ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (_isConnecting) ...[
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                        Text(
+                          _isConnecting ? 'Establishing Tunnel...' : 'Ready to scan',
+                          style: TextStyle(
+                            color: _isConnecting 
+                              ? Theme.of(context).colorScheme.primary.withOpacity(0.7)
+                              : Colors.white24,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                    ],
-                    Text(
-                      _isConnecting ? 'Handshaking...' : 'Ready to scan',
-                      style: TextStyle(
-                        color: _isConnecting 
-                          ? Theme.of(context).colorScheme.primary.withOpacity(0.7)
-                          : Colors.white24,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      ],
                     ),
                   ],
                 ),
               ),
             ],
           ),
-          if (!_isConnecting)
-            // Hidden scanner layer that fills the box
-            Positioned.fill(
-              child: IgnorePointer(
-                child: Opacity(
-                  opacity: 0,
-                  child: MobileScanner(
-                    controller: _scannerController,
-                    onDetect: _onDetect,
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );
@@ -136,8 +147,8 @@ class _PairingScreenState extends State<PairingScreen> {
 
   Widget _buildScannerUI(BuildContext context) {
     return Container(
-      width: 260,
-      height: 260,
+      width: 280,
+      height: 280,
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.02),
         border: Border.all(
@@ -161,8 +172,8 @@ class _PairingScreenState extends State<PairingScreen> {
             ..._buildCornerMarkers(context, _isConnecting ? Colors.greenAccent : Theme.of(context).colorScheme.primary),
             if (_isConnecting)
               const Icon(
-                Icons.check_circle_outline_rounded,
-                size: 140,
+                Icons.sync_rounded,
+                size: 80,
                 color: Colors.greenAccent,
               ),
             if (!_isConnecting)
@@ -229,9 +240,9 @@ class _ScanningLineAnimationState extends State<ScanningLineAnimation> with Sing
       animation: _controller,
       builder: (context, child) {
         return Positioned(
-          top: 40 + (180 * _controller.value),
+          top: 40 + (200 * _controller.value),
           child: Container(
-            width: 200,
+            width: 220,
             height: 2,
             decoration: BoxDecoration(
               boxShadow: [
